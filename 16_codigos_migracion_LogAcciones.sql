@@ -1,43 +1,60 @@
+SET SESSION sql_mode = '';
+SET FOREIGN_KEY_CHECKS = 0;
+SET UNIQUE_CHECKS = 0;
+
+CREATE TABLE IF NOT EXISTS legacy_vriunap.logTramites (
+  Id INT AUTO_INCREMENT PRIMARY KEY,
+  IdTramite INT NOT NULL,
+  IdUser INT NOT NULL,
+  Quien VARCHAR(50),
+  Fecha DATETIME NULL DEFAULT NULL,
+  Accion VARCHAR(60),
+  Detalle TEXT
+);
+
+CREATE TABLE IF NOT EXISTS legacy_vriunap.log_Acciones (
+  Id INT AUTO_INCREMENT PRIMARY KEY,
+  IdTramite INT NOT NULL,
+  IdEstado INT NOT NULL,
+  IdAccion VARCHAR(60),
+  IdUsuario INT NOT NULL,
+  IdRol INT NOT NULL,
+  Fecha DATETIME NOT NULL,
+  Mensaje TEXT
+);
+
 ALTER TABLE legacy_vriunap.log_Acciones MODIFY COLUMN IdAccion VARCHAR(60);
 
 INSERT INTO legacy_vriunap.log_Acciones (
-    IdTramite,
-    IdEstado,
-    IdAccion,
-    IdUsuario,
-    IdRol,
-    Fecha,
-    Mensaje
+  IdTramite,
+  IdEstado,
+  IdAccion,
+  IdUsuario,
+  IdRol,
+  Fecha,
+  Mensaje
 )
 SELECT 
-    IdTramite,
-    -10 AS IdEstado,
-    Accion AS IdAccion, -- Sin conversión, dejando el texto tal cual
-    IdUser AS IdUsuario,
-    CASE 
-        WHEN UPPER(Quien) = 'PILAR' THEN 4
-        WHEN Quien = 'Coordinacion' THEN 3
-        WHEN Quien = 'Docente' THEN 2
-        WHEN Quien = 'Tesista' THEN 1
-        ELSE 4
-    END AS IdRol,
-    IFNULL(Fecha, CURRENT_TIMESTAMP) AS Fecha,
-    Detalle AS Mensaje
-FROM 
-    vriunap_pilar3_abs_main.logTramites;
+  IdTramite,
+  -10 AS IdEstado,
+  Accion AS IdAccion,
+  IdUser AS IdUsuario,
+  CASE 
+    WHEN UPPER(Quien) = 'PILAR' THEN 4
+    WHEN Quien = 'Coordinacion' THEN 3
+    WHEN Quien = 'Docente' THEN 2
+    WHEN Quien = 'Tesista' THEN 1
+    ELSE 4
+  END AS IdRol,
+  IFNULL(Fecha, CURRENT_TIMESTAMP),
+  Detalle
+FROM vriunap_pilar3.logTramites;
 
-
-
-
-
--- Crear la tabla dic_Acciones
-CREATE TABLE legacy_vriunap.dic_Acciones (
-    Id INT NOT NULL AUTO_INCREMENT,
-    Accion VARCHAR(100) NOT NULL,
-    PRIMARY KEY (Id)
+CREATE TABLE IF NOT EXISTS legacy_vriunap.dic_Acciones (
+  Id INT AUTO_INCREMENT PRIMARY KEY,
+  Accion VARCHAR(100) NOT NULL
 );
 
--- Insertar las 47 acciones
 INSERT INTO legacy_vriunap.dic_Acciones (Accion) VALUES
 ('Acepta ser Asesor/Director de Proyecto'),
 ('Agregar Tesista'),
@@ -86,6 +103,3 @@ INSERT INTO legacy_vriunap.dic_Acciones (Accion) VALUES
 ('Subida de Borrador'),
 ('Subida de Borrador Final'),
 ('Tramite archivado por exceso de tiempos de ejecucion');
-
-
-

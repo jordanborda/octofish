@@ -20,5 +20,5 @@ SELECT
     Nombre, 
     subEsp AS TieneEspecialidades,
     1 AS Estado
-FROM vriunap_pilar3_abs_main.dicCarreras;
+FROM vriunap_absmain.dicCarreras;
 

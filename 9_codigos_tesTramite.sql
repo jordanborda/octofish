@@ -1,209 +1,129 @@
--- Configurar SQL_MODE temporalmente para evitar problemas
+-- Paso 0: Configurar entorno
 SET SESSION sql_mode = '';
+SET FOREIGN_KEY_CHECKS = 0;
+SET UNIQUE_CHECKS = 0;
 
--- Verificar si las tablas existen antes de realizar la migración
-SET @origen_exists = (
-    SELECT COUNT(*)
-    FROM information_schema.tables
-    WHERE table_schema = 'vriunap_pilar3'
-    AND table_name = 'tesTramites'
+-- Paso 1: Verificar si la columna idTramite ya existe, si no, crearla
+SET @existe_col_idTramite := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = 'legacy_vriunap'
+    AND TABLE_NAME = 'tbl_Tramites'
+    AND COLUMN_NAME = 'idTramite'
 );
 
-SET @destino_exists = (
-    SELECT COUNT(*)
-    FROM information_schema.tables
-    WHERE table_schema = 'legacy_vriunap'
-    AND table_name = 'tbl_Tramites'
+SET @crear_col_idTramite := IF(@existe_col_idTramite = 0,
+  'ALTER TABLE legacy_vriunap.tbl_Tramites ADD COLUMN idTramite INT NULL;',
+  'SELECT 1;'
 );
 
--- Migrar datos de vriunap_pilar3.tesTramites a legacy_vriunap.tbl_Tramites
-SET @insert_query = IF(@origen_exists > 0 AND @destino_exists > 0,
-    'INSERT IGNORE INTO legacy_vriunap.tbl_Tramites (
-        IdTesista,
-        Codigo,
-        Anio,
-        IdEstado,
-        IdSubLinea,
-        IdModalidad,
-        TieneCoAsesorExterno,
-        IdFacultad,
-        IdCarrera,
-        IdEspecialidad,
-        TipoTrabajo,
-        FechaRegistro
-    )
-    SELECT 
-        tt.IdTesista1 AS IdTesista,
-        tt.Codigo,
-        tt.Anio,
-        tt.Estado AS IdEstado,
-        tt.IdLinea AS IdSubLinea,
-        0 AS IdModalidad, -- Valor por defecto ya que no existe en origen
-        CASE WHEN tt.IdTesista2 > 0 THEN 1 ELSE 0 END AS TieneCoAsesorExterno,
-        tc.IdFacultad,
-        tt.IdCarrera,
-        tc.IdEspec AS IdEspecialidad,
-        IFNULL(tt._T_, "T") AS TipoTrabajo,
-        IFNULL(tt.FechRegProy, CURRENT_TIMESTAMP) AS FechaRegistro
-    FROM 
-        vriunap_pilar3.tesTramites tt
-    LEFT JOIN 
-        vriunap_pilar3.tblTesistasCodigos tc ON tt.IdTesista1 = tc.IdTesista
-    WHERE 
-        EXISTS (SELECT 1 FROM legacy_vriunap.tbl_Tesistas t WHERE t.IdUsuario = tt.IdTesista1)',
-    'SELECT "No se puede realizar la migración porque alguna tabla necesaria no existe"'
+PREPARE stmt1 FROM @crear_col_idTramite;
+EXECUTE stmt1;
+DEALLOCATE PREPARE stmt1;
+
+-- Paso 2: Verificar si la columna IdLinea ya existe, si no, crearla
+SET @existe_col_idLinea := (
+  SELECT COUNT(*)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = 'legacy_vriunap'
+    AND TABLE_NAME = 'tbl_Tramites'
+    AND COLUMN_NAME = 'IdLinea'
 );
 
-PREPARE stmt FROM @insert_query;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Verificar los resultados de la migración
-SET @count_query = IF(@destino_exists > 0,
-    'SELECT COUNT(*) AS RegistrosMigrados FROM legacy_vriunap.tbl_Tramites',
-    'SELECT "No se puede verificar los resultados porque la tabla destino no existe"'
+SET @crear_col_idLinea := IF(@existe_col_idLinea = 0,
+  'ALTER TABLE legacy_vriunap.tbl_Tramites ADD COLUMN IdLinea INT NULL;',
+  'SELECT 1;'
 );
 
-PREPARE stmt FROM @count_query;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+PREPARE stmt2 FROM @crear_col_idLinea;
+EXECUTE stmt2;
+DEALLOCATE PREPARE stmt2;
+
+-- Paso 3: Insertar datos duplicando por cada tesista y corrigiendo TipoTrabajo con el campo Tipo
+INSERT INTO legacy_vriunap.tbl_Tramites (
+  IdTesista,
+  Codigo,
+  Anio,
+  IdEstado,
+  IdSubLinea,
+  IdModalidad,
+  TieneCoAsesorExterno,
+  IdFacultad,
+  IdCarrera,
+  IdEspecialidad,
+  TipoTrabajo,
+  FechaRegistro,
+  idTramite,
+  IdLinea
+)
+SELECT
+  t.IdTesista,
+  t.Codigo,
+  t.Anio,
+  t.Estado,
+  t.IdLinAlte,
+  1,                  -- IdModalidad ← fijo 1
+  t.SuEst,
+  NULL,
+  t.IdCarrera,
+  NULL,
+  t.Tipo,             -- TipoTrabajo ← corregido, proviene del campo Tipo
+  t.FechRegProy,
+  t.IdTramite,
+  t.IdLinea
+FROM (
+  SELECT 
+    Id AS IdTramite,
+    IdTesista1 AS IdTesista,
+    Codigo,
+    Anio,
+    Estado,
+    IdLinAlte,
+    IdLinea,
+    SuEst,
+    IdCarrera,
+    Tipo,
+    FechRegProy
+  FROM vriunap_pilar3.tesTramites
+  WHERE IdTesista1 IS NOT NULL
+
+  UNION ALL
+
+  SELECT 
+    Id AS IdTramite,
+    IdTesista2 AS IdTesista,
+    Codigo,
+    Anio,
+    Estado,
+    IdLinAlte,
+    IdLinea,
+    SuEst,
+    IdCarrera,
+    Tipo,
+    FechRegProy
+  FROM vriunap_pilar3.tesTramites
+  WHERE IdTesista2 IS NOT NULL
+) AS t;
+
+-- Paso 4: Restaurar restricciones
+SET UNIQUE_CHECKS = 1;
+SET FOREIGN_KEY_CHECKS = 1;
+SET SESSION sql_mode = DEFAULT;
 
 
 
--- Configurar SQL_MODE temporalmente para permitir valores de fecha cero
+
+-- Paso 0: Configurar entorno
 SET SESSION sql_mode = '';
+SET FOREIGN_KEY_CHECKS = 0;
+SET UNIQUE_CHECKS = 0;
 
--- Verificar si las tablas existen
-SET @origen_exists = (
-    SELECT COUNT(*)
-    FROM information_schema.tables
-    WHERE table_schema = 'vriunap_pilar3'
-    AND table_name = 'tesTramites'
-);
+-- Paso 1: Actualizar los IdTesista en legacy_vriunap.tbl_Tramites usando MapeoTesistas
+UPDATE legacy_vriunap.tbl_Tramites t
+JOIN vriunap_pilar3.MapeoTesistas m ON t.IdTesista = m.idOriginal
+SET t.IdTesista = m.idNuevo;
 
--- Primero, crear la tabla tbl_ConformacionJurados si aún no existe
-CREATE TABLE IF NOT EXISTS legacy_vriunap.`tbl_ConformacionJurados` (
-  `Id` int NOT NULL AUTO_INCREMENT,
-  `IdTramite` int NOT NULL,
-  `IdJurado` int NOT NULL,
-  `Orden` int NOT NULL,
-  `IdEstado` int NOT NULL,
-  `FechaAsignacion` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `IdUsuarioAsignador` int NOT NULL,1
-  `Estado` tinyint NOT NULL DEFAULT '1',
-  PRIMARY KEY (`Id`),
-  UNIQUE KEY `idx_tramite_jurado_orden` (`IdTramite`, `IdJurado`, `Orden`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
-
--- Insertar registros de jurado1 si la tabla de origen existe
-SET @insert_query1 = IF(@origen_exists > 0,
-    'INSERT IGNORE INTO legacy_vriunap.tbl_ConformacionJurados 
-      (IdTramite, IdJurado, Orden, IdEstado, FechaAsignacion, IdUsuarioAsignador, Estado)
-     SELECT
-       Id AS IdTramite,
-       IdJurado1 AS IdJurado,
-       1 AS Orden,
-       Estado AS IdEstado,
-       IFNULL(FechRegProy, CURRENT_TIMESTAMP) AS FechaAsignacion,
-       1 AS IdUsuarioAsignador,
-       CASE WHEN Estado > 0 THEN 1 ELSE 0 END AS Estado
-     FROM vriunap_pilar3.tesTramites
-     WHERE IdJurado1 > 0
-     AND EXISTS (SELECT 1 FROM legacy_vriunap.tbl_Tramites t WHERE t.Id = tesTramites.Id)',
-    'SELECT "No se puede realizar la inserción de jurado1 porque la tabla origen no existe"'
-);
-
-PREPARE stmt FROM @insert_query1;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Insertar registros de jurado2 si la tabla de origen existe
-SET @insert_query2 = IF(@origen_exists > 0,
-    'INSERT IGNORE INTO legacy_vriunap.tbl_ConformacionJurados 
-      (IdTramite, IdJurado, Orden, IdEstado, FechaAsignacion, IdUsuarioAsignador, Estado)
-     SELECT
-       Id AS IdTramite,
-       IdJurado2 AS IdJurado,
-       2 AS Orden,
-       Estado AS IdEstado,
-       IFNULL(FechRegProy, CURRENT_TIMESTAMP) AS FechaAsignacion,
-       1 AS IdUsuarioAsignador,
-       CASE WHEN Estado > 0 THEN 1 ELSE 0 END AS Estado
-     FROM vriunap_pilar3.tesTramites
-     WHERE IdJurado2 > 0
-     AND EXISTS (SELECT 1 FROM legacy_vriunap.tbl_Tramites t WHERE t.Id = tesTramites.Id)',
-    'SELECT "No se puede realizar la inserción de jurado2 porque la tabla origen no existe"'
-);
-
-PREPARE stmt FROM @insert_query2;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Insertar registros de jurado3 si la tabla de origen existe
-SET @insert_query3 = IF(@origen_exists > 0,
-    'INSERT IGNORE INTO legacy_vriunap.tbl_ConformacionJurados 
-      (IdTramite, IdJurado, Orden, IdEstado, FechaAsignacion, IdUsuarioAsignador, Estado)
-     SELECT
-       Id AS IdTramite,
-       IdJurado3 AS IdJurado,
-       3 AS Orden,
-       Estado AS IdEstado,
-       IFNULL(FechRegProy, CURRENT_TIMESTAMP) AS FechaAsignacion,
-       1 AS IdUsuarioAsignador,
-       CASE WHEN Estado > 0 THEN 1 ELSE 0 END AS Estado
-     FROM vriunap_pilar3.tesTramites
-     WHERE IdJurado3 > 0
-     AND EXISTS (SELECT 1 FROM legacy_vriunap.tbl_Tramites t WHERE t.Id = tesTramites.Id)',
-    'SELECT "No se puede realizar la inserción de jurado3 porque la tabla origen no existe"'
-);
-
-PREPARE stmt FROM @insert_query3;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Insertar registros de jurado4 si la tabla de origen existe
-SET @insert_query4 = IF(@origen_exists > 0,
-    'INSERT IGNORE INTO legacy_vriunap.tbl_ConformacionJurados 
-      (IdTramite, IdJurado, Orden, IdEstado, FechaAsignacion, IdUsuarioAsignador, Estado)
-     SELECT
-       Id AS IdTramite,
-       IdJurado4 AS IdJurado,
-       4 AS Orden,
-       Estado AS IdEstado,
-       IFNULL(FechRegProy, CURRENT_TIMESTAMP) AS FechaAsignacion,
-       1 AS IdUsuarioAsignador,
-       CASE WHEN Estado > 0 THEN 1 ELSE 0 END AS Estado
-     FROM vriunap_pilar3.tesTramites
-     WHERE IdJurado4 > 0
-     AND EXISTS (SELECT 1 FROM legacy_vriunap.tbl_Tramites t WHERE t.Id = tesTramites.Id)',
-    'SELECT "No se puede realizar la inserción de jurado4 porque la tabla origen no existe"'
-);
-
-PREPARE stmt FROM @insert_query4;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Insertar registros de jurado5 si la tabla de origen existe
-SET @insert_query5 = IF(@origen_exists > 0,
-    'INSERT IGNORE INTO legacy_vriunap.tbl_ConformacionJurados 
-      (IdTramite, IdJurado, Orden, IdEstado, FechaAsignacion, IdUsuarioAsignador, Estado)
-     SELECT
-       Id AS IdTramite,
-       IdJurado5 AS IdJurado,
-       5 AS Orden,
-       Estado AS IdEstado,
-       IFNULL(FechRegProy, CURRENT_TIMESTAMP) AS FechaAsignacion,
-       1 AS IdUsuarioAsignador,
-       CASE WHEN Estado > 0 THEN 1 ELSE 0 END AS Estado
-     FROM vriunap_pilar3.tesTramites
-     WHERE IdJurado5 > 0
-     AND EXISTS (SELECT 1 FROM legacy_vriunap.tbl_Tramites t WHERE t.Id = tesTramites.Id)',
-    'SELECT "No se puede realizar la inserción de jurado5 porque la tabla origen no existe"'
-);
-
-PREPARE stmt FROM @insert_query5;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Verificar los resultados de la migración
-SELECT COUNT(*) AS RegistrosMigrados FROM legacy_vriunap.tbl_ConformacionJurados;
+-- Paso 2: Restaurar restricciones
+SET UNIQUE_CHECKS = 1;
+SET FOREIGN_KEY_CHECKS = 1;
+SET SESSION sql_mode = DEFAULT;

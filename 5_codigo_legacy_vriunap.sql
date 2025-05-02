@@ -301,7 +301,7 @@ CREATE TABLE tbl_Tramites (
 );
 
 CREATE TABLE tbl_TramitesDet (
-  Id int NOT NULL AUTO_INCREMENT,
+  Id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
   IdTramite int NOT NULL,
   Iteracion int NOT NULL,
   Titulo varchar(350) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -311,7 +311,7 @@ CREATE TABLE tbl_TramitesDet (
   vb3 int NOT NULL,
   vb4 int NOT NULL,
   Fecha datetime NOT NULL,
-  Obs varchar(400) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  Obs varchar(400) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
 );
 
 CREATE TABLE tbl_TramitesHistorial (

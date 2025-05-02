@@ -22,7 +22,7 @@ SELECT
     Denominacion,
     1 AS Estado,
     NOW() AS Fecha_Reg
-FROM vriunap_pilar3_abs_main.dicEspecialis;
+FROM vriunap_absmain.dicEspecialis;
 
 
 

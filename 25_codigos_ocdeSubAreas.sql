@@ -15,4 +15,4 @@ SELECT
     Id, 
     Nombre,
     IdArea
-FROM vriunap_pilar3_abs_main.ocdeSubAreas;
+FROM vriunap_absmain.ocdeSubAreas;

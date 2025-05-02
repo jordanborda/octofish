@@ -13,4 +13,4 @@ INSERT INTO legacy_vriunap.dic_ocdeAreas (Id, Nombre)
 SELECT 
     Id, 
     Nombre
-FROM vriunap_pilar3_abs_main.ocdeAreas;
+FROM vriunap_absmain.ocdeAreas;

@@ -19,4 +19,4 @@ SELECT
     IdArea, 
     IdSubArea,
     1 AS Estado
-FROM vriunap_pilar3_abs_main.ocdeDisciplinas;
+FROM vriunap_absmain.ocdeDisciplinas;

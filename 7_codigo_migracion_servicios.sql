@@ -23,7 +23,7 @@ INSERT IGNORE INTO legacy_vriunap.tbl_UsuariosServicios (IdUsuario, IdServicio)
 SELECT 
     d.Id AS IdUsuario,
     (SELECT Id FROM legacy_vriunap.dic_Servicios WHERE Nombre = 'Docente') AS IdServicio
-FROM vriunap_pilar3_abs_main.tblDocentes d
+FROM vriunap_absmain.tblDocentes d
 WHERE EXISTS (
     SELECT 1 FROM legacy_vriunap.tbl_Usuarios u WHERE u.Id = d.Id
 );

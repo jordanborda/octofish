@@ -37,7 +37,7 @@ SET sql_mode = DEFAULT;
 
 -- Actualizar IdDocente basándose en la tabla de mapeo
 UPDATE legacy_vriunap.dic_GradosDocentes gd
-JOIN vriunap_pilar3_abs_main.MapeoDocentes md ON gd.IdDocente = md.IdOriginal
+JOIN vriunap_absmain.MapeoDocentes md ON gd.IdDocente = md.IdOriginal
 SET gd.IdDocente = md.IdNuevo
 WHERE md.IdNuevo IS NOT NULL;
 

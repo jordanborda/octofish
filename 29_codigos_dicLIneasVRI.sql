@@ -15,4 +15,4 @@ SELECT
     Id, 
     Nombre, 
     Estado
-FROM vriunap_pilar3_abs_main.dic_LineasVRI;
+FROM vriunap_absmain.dic_LineasVRI;

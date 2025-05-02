@@ -29,7 +29,7 @@ WHERE l.Tipo = 'T';
 
 -- 2. Actualizar los registros donde Tipo = 'D' (Docentes)
 UPDATE legacy_vriunap.log_Logins l
-JOIN vriunap_pilar3_abs_main.MapeoDocentes m ON l.IdUser = m.IdOriginal
+JOIN vriunap_absmain.MapeoDocentes m ON l.IdUser = m.IdOriginal
 SET l.IdUser = m.IdNuevo
 WHERE l.Tipo = 'D';
 

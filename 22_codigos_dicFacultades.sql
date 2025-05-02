@@ -19,4 +19,4 @@ SELECT
     Abrev AS Abreviatura, 
     IdArea,
     1 AS Estado
-FROM vriunap_pilar3_abs_main.dicFacultades;
+FROM vriunap_absmain.dicFacultades;
