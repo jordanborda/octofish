@@ -1,6 +1,6 @@
 UPDATE vriunap_pilar3.logCorreos l
 JOIN vriunap_pilar3.MapeoTesistas m ON l.IdTesista = m.IdOriginal
-SET l.IdTesista = m.IdPrincipal;
+SET l.IdTesista = m.IdNuevo;
 
 UPDATE vriunap_pilar3.logCorreos l
 JOIN vriunap_absmain.MapeoDocentes m ON l.IdDocente = m.IdOriginal

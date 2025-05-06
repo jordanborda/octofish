@@ -63,7 +63,7 @@ WHERE Just NOT LIKE 'Envia Proyecto a Director%'
 
 
 UPDATE logCordinads l
-JOIN MapeoSecres m ON l.IdUser = m.IdOriginal
+JOIN MapeoCoordinador m ON l.IdUser = m.IdOriginal
 SET l.IdUser = m.IdNuevo;
 
 -- Primero creamos la tabla en la base de datos destino con la misma estructura
